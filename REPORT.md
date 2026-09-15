@@ -8,7 +8,7 @@
 
 ## Executive Summary (for a non-technical reader)
 
-We reviewed a demo cloud environment consisting of two storage buckets, one
+I reviewed a demo cloud environment consisting of two storage buckets, one
 server access rule, and the account's activity logging setup. The initial
 review found 6 issues, ranging from a server left open to the entire
 internet to missing backup protection on stored files.
