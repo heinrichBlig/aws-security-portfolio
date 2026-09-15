@@ -16,6 +16,8 @@ Usage:
     python audit.py
 """
 
+from datetime import datetime, timezone
+
 import boto3
 from botocore.exceptions import ClientError
 
@@ -137,6 +139,42 @@ def check_mfa():
             )
 
 
+def check_access_keys():
+    iam = boto3.client("iam")
+    users = iam.list_users()["Users"]
+
+    for user in users:
+        username = user["UserName"]
+        keys = iam.list_access_keys(UserName=username)["AccessKeyMetadata"]
+
+        for key in keys:
+            key_id = key["AccessKeyId"]
+            created = key["CreateDate"]
+
+            # Old key check
+            age = datetime.now(timezone.utc) - created
+            if age.days >= 90:
+                add_finding(
+                    "MEDIUM",
+                    f"IAM user: {username}",
+                    f"Access key {key_id} is {age.days} days old",
+                    "Rotate this access key — old, long-lived keys are a "
+                    "common target if leaked",
+                )
+
+            # Never-used key check
+            last_used_info = iam.get_access_key_last_used(AccessKeyId=key_id)
+            last_used = last_used_info["AccessKeyLastUsed"].get("LastUsedDate")
+            if last_used is None:
+                add_finding(
+                    "MEDIUM",
+                    f"IAM user: {username}",
+                    f"Access key {key_id} has never been used",
+                    "Consider deleting this key if it's not needed — "
+                    "unused keys are unnecessary risk",
+                )
+
+
 def check_rds_instances():
     rds = boto3.client("rds")
     try:
@@ -214,7 +252,9 @@ def print_report():
     order = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
     findings.sort(key=lambda f: order[f["severity"]])
 
-    print(f"\n{'='*70}\nAWS SECURITY AUDIT REPORT — {len(findings)} finding(s)\n{'='*70}\n")
+    print(
+        f"\n{'=' * 70}\nAWS SECURITY AUDIT REPORT — {len(findings)} finding(s)\n{'=' * 70}\n"
+    )
     for f in findings:
         color = SEVERITY_COLORS.get(f["severity"], "")
         print(f"{color}[{f['severity']}]{RESET} {f['resource']}")
@@ -227,6 +267,7 @@ if __name__ == "__main__":
     check_s3_buckets()
     check_iam_roles()
     check_mfa()
+    check_access_keys()
     check_rds_instances()
     check_cloudtrail()
     check_security_groups()
