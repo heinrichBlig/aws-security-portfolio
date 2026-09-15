@@ -9,6 +9,7 @@ against a live (simulated) environment.
 `scripts/audit.py` checks for:
 - S3 buckets missing public access blocks, encryption, or versioning
 - IAM roles with overly permissive (`"*"` on `"*"`) policies
+- IAM users without MFA enabled
 - RDS instances that are unencrypted or publicly accessible
 - Security groups with SSH/RDP open to the entire internet (`0.0.0.0/0`)
 - Missing or misconfigured CloudTrail logging
@@ -57,4 +58,3 @@ studied. I'll add Terraform here once I've gone through it properly.
 
 Only run this against AWS accounts you own or have explicit permission
 to audit, using read-only credentials.
-# aws-security-portfolio

@@ -119,6 +119,24 @@ def check_iam_roles():
                     )
 
 
+def check_mfa():
+    iam = boto3.client("iam")
+    users = iam.list_users()["Users"]
+
+    for user in users:
+        username = user["UserName"]
+        mfa_devices = iam.list_mfa_devices(UserName=username)
+
+        if not mfa_devices.get("MFADevices", []):
+            add_finding(
+                "CRITICAL",
+                f"IAM user: {username}",
+                "No MFA device configured",
+                "Enable MFA for this user — missing MFA is one of the "
+                "single biggest real-world risk factors for account compromise",
+            )
+
+
 def check_rds_instances():
     rds = boto3.client("rds")
     try:
@@ -208,6 +226,7 @@ if __name__ == "__main__":
     print("Running AWS security audit...")
     check_s3_buckets()
     check_iam_roles()
+    check_mfa()
     check_rds_instances()
     check_cloudtrail()
     check_security_groups()
